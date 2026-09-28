@@ -52,6 +52,11 @@ html,body{min-height:100%;height:auto;margin:0;background:#0d0d0e;overflow-x:hid
 .trophy.silver{--metal:#d7dbe0}
 .trophy.bronze{--metal:#c98955}
 
+
+.grid,.grid.cols2,.grid.cols3{grid-template-columns:1fr!important}
+.grid.compact .player,.grid.dense .player{min-height:58px;padding:8px 16px;grid-template-columns:60px minmax(0,1fr) 70px 125px}
+.grid.compact .place,.grid.compact .name,.grid.compact .score,
+.grid.dense .place,.grid.dense .name,.grid.dense .score{font-size:clamp(18px,2vw,28px)}
 </style>
 </head>
 <body>
@@ -74,9 +79,7 @@ async function load(){
     document.getElementById("round").textContent = n ? "ПОСЛЕ РАУНДА "+d.round : "";
 
     box.className="grid";
-    if(n>12) box.classList.add("cols2");
-    if(n>30) box.classList.add("cols3","compact");
-    if(n>60) box.classList.add("cols3","compact");
+    // Всегда одна колонка: список прокручивается вниз колесом мыши.
 
     if(!n){
       box.innerHTML='<div class="empty">Участники пока не подключились</div>';
