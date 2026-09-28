@@ -24,13 +24,13 @@ def qr_page(): return render_template("qr.html")
 @app.get("/api/state")
 def state():
  d=request.args.get("device",""); r=S["r"]; key=f'{S["session"]}:{r}:{d}'
- return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"])
+ return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"],session=S["session"],registered=d in S["players"])
 @app.post("/api/join")
 def join():
  x=request.json or {}; d=str(x.get("device",""))[:100]; n=str(x.get("name","")).strip()[:40]
  if not d or not n:return jsonify(ok=False),400
  with lock:S["players"][d]=n
- return jsonify(ok=True)
+ return jsonify(ok=True,session=S["session"])
 @app.post("/api/vote")
 def vote():
  x=request.json or {}; d=str(x.get("device","")); c=int(x.get("choice",-1))
