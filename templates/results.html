@@ -12,7 +12,7 @@ html,body{min-height:100%;margin:0;background:#0d0d0e;overflow-x:hidden;overflow
 .title{font-size:clamp(38px,5vw,76px);font-weight:900;line-height:1;margin:10px 0}
 .round{font-size:clamp(18px,2vw,30px);color:#aaa;font-weight:700;white-space:nowrap}
 .grid{display:grid;grid-template-columns:1fr;gap:10px 24px}
-.player{display:grid;grid-template-columns:72px 1fr 125px;align-items:center;min-height:58px;padding:8px 16px;background:#19191b;border:1px solid #333;border-radius:13px;box-sizing:border-box}
+.player{display:grid;grid-template-columns:60px minmax(0,1fr) 70px 125px;align-items:center;min-height:58px;padding:8px 16px;background:#19191b;border:1px solid #333;border-radius:13px;box-sizing:border-box}
 .place{font-size:26px;font-weight:900;color:#ddd;display:flex;align-items:center;gap:8px}
 .cup{font-size:28px;line-height:1;display:inline-block}
 .gold .cup{filter:sepia(1) saturate(5) brightness(1.08)}
@@ -30,15 +30,28 @@ html,body{min-height:100%;margin:0;background:#0d0d0e;overflow-x:hidden;overflow
 .grid.cols2{grid-template-columns:repeat(2,minmax(0,1fr))}
 .grid.cols3{grid-template-columns:repeat(3,minmax(0,1fr))}
 .grid.compact{gap:7px 18px}
-.grid.compact .player{min-height:45px;padding:5px 12px;grid-template-columns:55px 1fr 90px}
+.grid.compact .player{min-height:45px;padding:5px 12px;grid-template-columns:45px minmax(0,1fr) 52px 90px}
 .grid.compact .place,.grid.compact .name,.grid.compact .score{font-size:19px}
 .grid.dense{gap:5px 14px}
-.grid.dense .player{min-height:36px;padding:3px 9px;grid-template-columns:45px 1fr 72px;border-radius:9px}
+.grid.dense .player{min-height:36px;padding:3px 9px;grid-template-columns:38px minmax(0,1fr) 44px 72px;border-radius:9px}
 .grid.dense .place,.grid.dense .name,.grid.dense .score{font-size:15px}
 @media(max-width:800px){
   html,body{overflow:auto}.w{padding:20px}.head{align-items:start;flex-direction:column}
   .grid,.grid.cols2,.grid.cols3{grid-template-columns:1fr!important}
 }
+
+.trophycell{display:flex;justify-content:center;align-items:center}
+.trophy{--metal:#ffd21c;position:relative;width:24px;height:22px}
+.trophy .bowl{position:absolute;left:5px;top:1px;width:14px;height:11px;background:var(--metal);border-radius:2px 2px 8px 8px}
+.trophy .bowl:before,.trophy .bowl:after{content:"";position:absolute;top:1px;width:7px;height:8px;border:3px solid var(--metal);background:transparent}
+.trophy .bowl:before{left:-7px;border-right:0;border-radius:8px 0 0 8px}
+.trophy .bowl:after{right:-7px;border-left:0;border-radius:0 8px 8px 0}
+.trophy .stem{position:absolute;left:10px;top:11px;width:4px;height:6px;background:var(--metal)}
+.trophy .base{position:absolute;left:5px;bottom:1px;width:14px;height:4px;background:var(--metal);border-radius:2px}
+.trophy.gold{--metal:#ffd21c}
+.trophy.silver{--metal:#d7dbe0}
+.trophy.bronze{--metal:#c98955}
+
 </style>
 </head>
 <body>
@@ -75,8 +88,9 @@ async function load(){
       if(x.score!==prevScore){place=i+1;prevScore=x.score}
       let medal = place===1 ? "gold" : place===2 ? "silver" : place===3 ? "bronze" : "";
       return `<div class="player ${medal}">
-        <div class="place">${place<=3 ? `<span class="cup">🏆</span>` : ""}<span>${place}</span></div>
+        <div class="place"><span>${place}</span></div>
         <div class="name">${esc(x.name)}</div>
+        <div class="trophycell">${place<=3 ? `<span class="trophy ${place===1?"gold":place===2?"silver":"bronze"}"><i class="bowl"></i><i class="stem"></i><i class="base"></i></span>` : ""}</div>
         <div class="score">${x.score} <span class="unit">БАЛЛ.</span></div>
       </div>`
     }).join("");
