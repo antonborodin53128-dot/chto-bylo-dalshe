@@ -6,14 +6,18 @@
 <link rel="stylesheet" href="/static/style.css">
 <title>Таблица лидеров</title>
 <style>
-html,body{min-height:100%;margin:0;background:#0d0d0e;overflow:hidden}
+html,body{min-height:100%;margin:0;background:#0d0d0e;overflow-x:hidden;overflow-y:auto}
 .w{max-width:1600px;margin:auto;padding:28px 42px;box-sizing:border-box}
 .head{display:flex;justify-content:space-between;align-items:end;gap:20px;margin-bottom:24px}
 .title{font-size:clamp(38px,5vw,76px);font-weight:900;line-height:1;margin:10px 0}
 .round{font-size:clamp(18px,2vw,30px);color:#aaa;font-weight:700;white-space:nowrap}
 .grid{display:grid;grid-template-columns:1fr;gap:10px 24px}
 .player{display:grid;grid-template-columns:72px 1fr 125px;align-items:center;min-height:58px;padding:8px 16px;background:#19191b;border:1px solid #333;border-radius:13px;box-sizing:border-box}
-.place{font-size:26px;font-weight:900;color:#ddd}
+.place{font-size:26px;font-weight:900;color:#ddd;display:flex;align-items:center;gap:8px}
+.cup{font-size:28px;line-height:1;display:inline-block}
+.gold .cup{filter:sepia(1) saturate(5) brightness(1.08)}
+.silver .cup{filter:grayscale(1) brightness(1.65)}
+.bronze .cup{filter:sepia(1) saturate(2.1) brightness(.82)}
 .name{font-size:clamp(18px,2vw,28px);font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .score{text-align:right;font-size:clamp(18px,2vw,28px);font-weight:900}
 .unit{color:#777;font-size:.52em}
@@ -59,7 +63,7 @@ async function load(){
     box.className="grid";
     if(n>12) box.classList.add("cols2");
     if(n>30) box.classList.add("cols3","compact");
-    if(n>60) box.classList.add("cols3","dense");
+    if(n>60) box.classList.add("cols3","compact");
 
     if(!n){
       box.innerHTML='<div class="empty">Участники пока не подключились</div>';
@@ -71,7 +75,7 @@ async function load(){
       if(x.score!==prevScore){place=i+1;prevScore=x.score}
       let medal = place===1 ? "gold" : place===2 ? "silver" : place===3 ? "bronze" : "";
       return `<div class="player ${medal}">
-        <div class="place">${place}</div>
+        <div class="place">${place<=3 ? `<span class="cup">🏆</span>` : ""}<span>${place}</span></div>
         <div class="name">${esc(x.name)}</div>
         <div class="score">${x.score} <span class="unit">БАЛЛ.</span></div>
       </div>`
