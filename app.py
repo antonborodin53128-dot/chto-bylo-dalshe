@@ -18,6 +18,9 @@ def admin(): return render_template("admin.html")
 
 @app.get("/results")
 def results(): return render_template("results.html")
+
+@app.get("/qr")
+def qr_page(): return render_template("qr.html")
 @app.get("/api/state")
 def state():
  d=request.args.get("device",""); r=S["r"]; key=f'{S["session"]}:{r}:{d}'
@@ -56,20 +59,6 @@ def action():
   if a=="toggle":S["open"]=not S["open"]
   elif a=="round":S["r"]=max(0,min(6,int(x["round"])-1));S["open"]=False
   elif a=="reset":S.update(r=0,open=False,session=str(uuid.uuid4()),players={},votes={})
-  elif a=="add_test_players":
-   names=["Алексей","Мария","Дмитрий","Елена","Сергей","Анна","Максим","Ольга","Иван","Наталья","Андрей","Екатерина","Михаил","Юлия","Артём","Татьяна","Роман","Виктория","Никита","Ксения","Павел","Алина","Владимир","Дарья","Денис","София","Игорь","Полина","Евгений","Анастасия","Кирилл","Вероника","Олег","Марина","Вадим","Ирина","Стас","Лера","Глеб","Диана","Арсений","Карина","Фёдор","Александра","Тимур","Милана","Вячеслав","Валерия","Руслан","Яна"]
-   played=max(1,S["r"]+1)
-   for i,n in enumerate(names):
-    d=f"TEST_{i+1:03d}";S["players"][d]=n
-    score=i%(played+1)
-    for rr in range(played):
-     correct=Q[rr][2]
-     S["votes"][f'{S["session"]}:{rr}:{d}']=correct if rr<score else (correct+1)%4
-  elif a=="remove_test_players":
-   td=[d for d in S["players"] if d.startswith("TEST_")]
-   for d in td:S["players"].pop(d,None)
-   for k in list(S["votes"]):
-    if ":TEST_" in k:S["votes"].pop(k,None)
   else:return jsonify(ok=False),400
  return jsonify(ok=True)
 if __name__=="__main__":app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
