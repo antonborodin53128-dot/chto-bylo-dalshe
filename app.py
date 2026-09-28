@@ -15,6 +15,9 @@ S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{}}
 def home(): return render_template("index.html")
 @app.get("/admin")
 def admin(): return render_template("admin.html")
+
+@app.get("/results")
+def results(): return render_template("results.html")
 @app.get("/api/state")
 def state():
  d=request.args.get("device",""); r=S["r"]; key=f'{S["session"]}:{r}:{d}'
