@@ -83,14 +83,16 @@ async function load(){
       return;
     }
 
+    const scoreLevels=[...new Set(d.leaders.map(x=>x.score))].slice(0,3);
     let prevScore=null, place=0;
     box.innerHTML=d.leaders.map((x,i)=>{
       if(x.score!==prevScore){place=i+1;prevScore=x.score}
-      let medal = place===1 ? "gold" : place===2 ? "silver" : place===3 ? "bronze" : "";
+      const tier=scoreLevels.indexOf(x.score);
+      const medal=tier===0?"gold":tier===1?"silver":tier===2?"bronze":"";
       return `<div class="player ${medal}">
         <div class="place"><span>${place}</span></div>
         <div class="name">${esc(x.name)}</div>
-        <div class="trophycell">${place<=3 ? `<span class="trophy ${place===1?"gold":place===2?"silver":"bronze"}"><i class="bowl"></i><i class="stem"></i><i class="base"></i></span>` : ""}</div>
+        <div class="trophycell">${tier>=0 && tier<3 ? `<span class="trophy ${medal}"><i class="bowl"></i><i class="stem"></i><i class="base"></i></span>` : ""}</div>
         <div class="score">${x.score} <span class="unit">БАЛЛ.</span></div>
       </div>`
     }).join("");
