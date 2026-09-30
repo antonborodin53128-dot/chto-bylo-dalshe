@@ -10,7 +10,7 @@ Q=[
 ("ЧТО СЛУЧИТСЯ С ГИМНАСТОМ?",["Станет добычей крокодила","Выполнит акробатический трюк","Сломает ветку","Зацепится футболкой за ветку"],0),
 ("КТО ЖЕ ПОЁТ ЗА ШИРМОЙ?",["Ургант","Басков","Билан","Сын Градского"],2),
 ("КАКАЯ КРЫШКА ЗАЙМЁТ 1-Е МЕСТО?",["Синяя","Белая","Голубая","Золотая"],3)]
-S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{},"preload_done":0,"preload_total":0}
+S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{}}
 @app.get("/")
 def home(): return render_template("index.html")
 @app.get("/admin")
@@ -24,13 +24,13 @@ def qr_page(): return render_template("qr.html")
 @app.get("/api/state")
 def state():
  d=request.args.get("device",""); r=S["r"]; key=f'{S["session"]}:{r}:{d}'
- return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"],session=S["session"],registered=d in S["players"])
+ return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"])
 @app.post("/api/join")
 def join():
  x=request.json or {}; d=str(x.get("device",""))[:100]; n=str(x.get("name","")).strip()[:40]
  if not d or not n:return jsonify(ok=False),400
  with lock:S["players"][d]=n
- return jsonify(ok=True,session=S["session"])
+ return jsonify(ok=True)
 @app.post("/api/vote")
 def vote():
  x=request.json or {}; d=str(x.get("device","")); c=int(x.get("choice",-1))
@@ -61,40 +61,4 @@ def action():
   elif a=="reset":S.update(r=0,open=False,session=str(uuid.uuid4()),players={},votes={})
   else:return jsonify(ok=False),400
  return jsonify(ok=True)
-
-# --- Guest presentation screen ---
-@app.get('/screen')
-def screen():
- return render_template('screen.html')
-
-@app.get('/api/presentation')
-def presentation_state():
- return jsonify(slide=S.get('slide',1), total=40)
-
-
-@app.route('/api/presentation/preload',methods=['GET','POST'])
-def presentation_preload():
- if request.method=='POST':
-  x=request.json or {}
-  with lock:
-   S['preload_done']=max(0,int(x.get('done',0)))
-   S['preload_total']=max(0,int(x.get('total',0)))
-  return jsonify(ok=True)
- total=int(S.get('preload_total',0)); done=int(S.get('preload_done',0))
- pct=round(done*100/total) if total else 0
- return jsonify(done=done,total=total,percent=pct,ready=bool(total and done>=total))
-
-@app.post('/api/presentation/action')
-def presentation_action():
- x=request.json or {}; a=x.get('action')
- with lock:
-  cur=int(S.get('slide',1))
-  if a=='next': cur=min(40,cur+1)
-  elif a=='prev': cur=max(1,cur-1)
-  elif a=='goto': cur=max(1,min(40,int(x.get('slide',cur))))
-  elif a=='first': cur=1
-  else: return jsonify(ok=False),400
-  S['slide']=cur
- return jsonify(ok=True,slide=cur)
-
 if __name__=="__main__":app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
