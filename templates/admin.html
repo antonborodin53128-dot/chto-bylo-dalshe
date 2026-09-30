@@ -6,9 +6,9 @@
 #qrcode{display:inline-block;background:#fff;padding:12px;border-radius:12px}
 #qrcode img,#qrcode canvas{display:block}
 .qr-url{margin-top:10px;color:#ffd21c;font-weight:700;word-break:break-all}
-</style>
+.remote{margin-top:18px;padding-top:16px;border-top:1px solid #333}.remote-row{display:flex;gap:8px;flex-wrap:wrap}.remote-row input{flex:1;min-width:140px;padding:11px;background:#111;color:#fff;border:1px solid #555;border-radius:9px}.remote-nav{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.remote-nav button{font-weight:900;padding:15px 8px}.remote-status{color:#aaa;font-weight:800;margin-top:9px}</style>
 </head><body><div class="w"><div class="y">ПАНЕЛЬ ВЕДУЩЕГО</div><div class="c"><select id="sel" onchange="rnd()"></select><button id="tog" onclick="act('toggle')"></button><button onclick="reset()">СБРОСИТЬ ИГРУ</button>
-<button onclick="toggleQR()" id="qrButton">ПОКАЗАТЬ QR-КОД</button><h1 id="q"></h1><p id="m" class="muted"></p></div><div class="c"><h2>Результаты</h2><div id="res"></div></div><div class="c"><h2>Таблица лидеров</h2><div id="lead"></div></div></div><script>
+<button onclick="toggleQR()" id="qrButton">ПОКАЗАТЬ QR-КОД</button><h1 id="q"></h1><p id="m" class="muted"></p><div class="remote"><div class="remote-row"><input id="pptLogin" placeholder="Логин пульта"><button onclick="savePptLogin()">ПОДКЛЮЧИТЬ</button><button onclick="resetPptLogin()">СБРОСИТЬ ЛОГИН</button></div><div id="pptStatus" class="remote-status">ПУЛЬТЫ: логин не задан</div><div class="remote-nav"><button onclick="ppt('prev')">← ПРЕДЫДУЩИЙ СЛАЙД</button><button onclick="ppt('next')">СЛЕДУЮЩИЙ СЛАЙД →</button></div></div></div><div class="c"><h2>Результаты</h2><div id="res"></div></div><div class="c"><h2>Таблица лидеров</h2><div id="lead"></div></div></div><script>
 for(let i=1;i<=7;i++)sel.add(new Option("Раунд "+i,i));async function act(a,e={}){await fetch("/api/admin/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({action:a,...e})});load()}function rnd(){act("round",{round:+sel.value})}function reset(){if(confirm("Удалить участников, голоса и очки?"))act("reset")}
 async function load(){let d=await(await fetch("/api/admin")).json();sel.value=d.round;q.textContent=d.question;tog.textContent=d.open?"ЗАКРЫТЬ ГОЛОСОВАНИЕ":"ОТКРЫТЬ ГОЛОСОВАНИЕ";m.textContent="Участников: "+d.players+" · Проголосовало: "+d.voted;let t=Math.max(1,d.voted);res.innerHTML=d.answers.map((x,i)=>`<p><b>${["А","Б","В","Г"][i]}: ${d.counts[i]} — ${Math.round(d.counts[i]*100/t)}%</b> <span class="muted">${x}</span></p><div class="bar"><div class="fill" style="width:${d.counts[i]*100/t}%"></div></div>`).join("");lead.innerHTML=d.leaders.length?"<table>"+d.leaders.map((x,i)=>`<tr><td>${i+1}. ${x.name}</td><td><b>${x.score}</b></td></tr>`).join("")+"</table>":"<span class=muted>Пока нет участников</span>"}setInterval(load,1000);load()</script><div class="qr-card" id="qrCard" style="display:none">
   <div class="qr-title">QR-КОД ДЛЯ УЧАСТНИКОВ</div>
@@ -41,45 +41,14 @@ function toggleQR(){
 })();
 </script>
 
-<div class="c" style="margin-top:18px">
-  <div class="y">POWERPOINT REMOTE</div>
-  <p class="muted">Код показывается в программе Presentation Remote на ноутбуке.</p>
-  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
-    <input id="pptCode" inputmode="numeric" maxlength="6" placeholder="КОД 000000"
-      style="font-size:22px;font-weight:900;letter-spacing:4px;max-width:190px;padding:12px;border-radius:10px;border:1px solid #444;background:#111;color:#fff">
-    <button onclick="savePptCode()">ПОДКЛЮЧИТЬ</button>
-  </div>
-  <p id="pptStatus" class="muted">Пульт не подключён</p>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
-    <button onclick="ppt('prev')" style="font-size:22px;min-height:70px">← НАЗАД</button>
-    <button onclick="ppt('next')" style="font-size:22px;min-height:70px">ВПЕРЁД →</button>
-  </div>
-  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
-    <button onclick="ppt('start')">▶ ЗАПУСТИТЬ</button>
-    <button onclick="ppt('black')">■ ЧЁРНЫЙ ЭКРАН</button>
-    <button onclick="ppt('end')">ESC ЗАВЕРШИТЬ</button>
-  </div>
-</div>
 <script>
-const pptCode=document.getElementById("pptCode"), pptStatus=document.getElementById("pptStatus");
-pptCode.value=localStorage.getItem("pptRemoteCode")||"";
-function savePptCode(){localStorage.setItem("pptRemoteCode",pptCode.value.trim());pptStatus.textContent="Проверяю соединение…";pptCheck()}
-async function ppt(command){
- const code=(pptCode.value||"").trim();
- if(code.length!==6){pptStatus.textContent="Введите 6-значный код из программы";return}
- const r=await fetch("/api/ppt/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,command})});
- if(!r.ok)pptStatus.textContent="Пульт не подключён";
-}
-async function pptCheck(){
- const code=(pptCode.value||"").trim(); if(code.length!==6)return;
- try{
-  const d=await(await fetch("/api/ppt/status?code="+encodeURIComponent(code)+"&_="+Date.now(),{cache:"no-store"})).json();
-  if(d.connected){
-   pptStatus.textContent="● ПОДКЛЮЧЕНО"+(d.name?" · "+d.name:"")+(d.total?" · Слайд "+d.slide+" / "+d.total:"");
-  }else pptStatus.textContent="Пульт не подключён";
- }catch(e){pptStatus.textContent="Нет связи с сервером"}
-}
-setInterval(pptCheck,1500);pptCheck();
+const pptLogin=document.getElementById("pptLogin");
+pptLogin.value=localStorage.getItem("pptLogin")||"";
+function cleanLogin(v){return (v||"").trim().toLowerCase().replace(/[^a-zа-яё0-9_-]/gi,"").slice(0,40)}
+function savePptLogin(){pptLogin.value=cleanLogin(pptLogin.value);if(pptLogin.value)localStorage.setItem("pptLogin",pptLogin.value);pptStatusUpdate()}
+function resetPptLogin(){localStorage.removeItem("pptLogin");pptLogin.value="";pptStatusUpdate()}
+async function ppt(command){const login=cleanLogin(pptLogin.value);if(!login){alert("Введите логин пульта");return}await fetch("/api/ppt/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({login,command})})}
+async function pptStatusUpdate(){const login=cleanLogin(pptLogin.value),el=document.getElementById("pptStatus");if(!login){el.textContent="ПУЛЬТЫ: логин не задан";return}try{const d=await(await fetch("/api/ppt/status?login="+encodeURIComponent(login),{cache:"no-store"})).json();el.textContent="ПУЛЬТЫ: ● "+d.online+" ПОДКЛЮЧЕНО · "+login.toUpperCase()}catch(e){el.textContent="ПУЛЬТЫ: связь с сервером…"}}
+setInterval(pptStatusUpdate,1500);pptStatusUpdate();
 </script>
-
 </body></html>
