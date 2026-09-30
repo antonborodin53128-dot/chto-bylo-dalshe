@@ -40,4 +40,46 @@ function toggleQR(){
   }
 })();
 </script>
+
+<div class="c" style="margin-top:18px">
+  <div class="y">POWERPOINT REMOTE</div>
+  <p class="muted">Код показывается в программе Presentation Remote на ноутбуке.</p>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+    <input id="pptCode" inputmode="numeric" maxlength="6" placeholder="КОД 000000"
+      style="font-size:22px;font-weight:900;letter-spacing:4px;max-width:190px;padding:12px;border-radius:10px;border:1px solid #444;background:#111;color:#fff">
+    <button onclick="savePptCode()">ПОДКЛЮЧИТЬ</button>
+  </div>
+  <p id="pptStatus" class="muted">Пульт не подключён</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px">
+    <button onclick="ppt('prev')" style="font-size:22px;min-height:70px">← НАЗАД</button>
+    <button onclick="ppt('next')" style="font-size:22px;min-height:70px">ВПЕРЁД →</button>
+  </div>
+  <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px">
+    <button onclick="ppt('start')">▶ ЗАПУСТИТЬ</button>
+    <button onclick="ppt('black')">■ ЧЁРНЫЙ ЭКРАН</button>
+    <button onclick="ppt('end')">ESC ЗАВЕРШИТЬ</button>
+  </div>
+</div>
+<script>
+const pptCode=document.getElementById("pptCode"), pptStatus=document.getElementById("pptStatus");
+pptCode.value=localStorage.getItem("pptRemoteCode")||"";
+function savePptCode(){localStorage.setItem("pptRemoteCode",pptCode.value.trim());pptStatus.textContent="Проверяю соединение…";pptCheck()}
+async function ppt(command){
+ const code=(pptCode.value||"").trim();
+ if(code.length!==6){pptStatus.textContent="Введите 6-значный код из программы";return}
+ const r=await fetch("/api/ppt/action",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({code,command})});
+ if(!r.ok)pptStatus.textContent="Пульт не подключён";
+}
+async function pptCheck(){
+ const code=(pptCode.value||"").trim(); if(code.length!==6)return;
+ try{
+  const d=await(await fetch("/api/ppt/status?code="+encodeURIComponent(code)+"&_="+Date.now(),{cache:"no-store"})).json();
+  if(d.connected){
+   pptStatus.textContent="● ПОДКЛЮЧЕНО"+(d.name?" · "+d.name:"")+(d.total?" · Слайд "+d.slide+" / "+d.total:"");
+  }else pptStatus.textContent="Пульт не подключён";
+ }catch(e){pptStatus.textContent="Нет связи с сервером"}
+}
+setInterval(pptCheck,1500);pptCheck();
+</script>
+
 </body></html>
