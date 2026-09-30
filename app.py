@@ -1,6 +1,6 @@
 from flask import Flask,request,jsonify,render_template
 from threading import Lock
-import os,uuid
+import os,uuid,json,urllib.request,urllib.parse
 app=Flask(__name__); lock=Lock()
 Q=[
 ("ЧТО СДЕЛАЕТ БЫК?",["Развернётся и спокойно уйдёт","Пробежит мимо контейнера","Запрыгнет внутрь к мужчине","Начнёт бодать контейнер"],2),
@@ -66,53 +66,41 @@ def action():
   else:return jsonify(ok=False),400
  return jsonify(ok=True)
 
-# Presentation Remote: login + multiple laptops
-import time as _time
-PPT={}; PPT_LOCK=Lock(); PPT_ONLINE_SECONDS=12
+# Presentation Remote proxy: the contest stays independent, while commands go
+# to the standalone realtime Presentation Remote service.
+PRESENTATION_REMOTE_URL=os.environ.get("PRESENTATION_REMOTE_URL","https://presentation-remote-yy6x.onrender.com").rstrip("/")
 
-def _ppt_login(v):
+def _remote_json(path, method="GET", payload=None):
+ data=None
+ headers={}
+ if payload is not None:
+  data=json.dumps(payload).encode("utf-8"); headers["Content-Type"]="application/json"
+ req=urllib.request.Request(PRESENTATION_REMOTE_URL+path,data=data,headers=headers,method=method)
+ with urllib.request.urlopen(req,timeout=8) as r:
+  return json.loads(r.read().decode("utf-8"))
+
+def _clean_remote_login(v):
  return "".join(ch for ch in str(v or "").strip().lower() if ch.isalnum() or ch in "_-")[:40]
-def _ppt_room(login):
- return PPT.setdefault(login,{"seq":0,"command":"","devices":{}})
 
-@app.post("/api/ppt/register")
-def ppt_register():
- x=request.json or {}; login=_ppt_login(x.get("login")); dev=str(x.get("device_id",""))[:100]
- if len(login)<2 or not dev:return jsonify(ok=False),400
- with PPT_LOCK:
-  room=_ppt_room(login); room["devices"][dev]={"seen":_time.time()}; seq=room["seq"]
- return jsonify(ok=True,seq=seq)
-
-@app.post("/api/ppt/heartbeat")
-def ppt_heartbeat():
- x=request.json or {}; login=_ppt_login(x.get("login")); dev=str(x.get("device_id",""))[:100]
- if len(login)<2 or not dev:return jsonify(ok=False),400
- with PPT_LOCK:_ppt_room(login)["devices"].setdefault(dev,{})["seen"]=_time.time()
- return jsonify(ok=True)
-
-@app.get("/api/ppt/poll")
-def ppt_poll():
- login=_ppt_login(request.args.get("login")); dev=str(request.args.get("device_id",""))[:100]; last=int(request.args.get("last",0) or 0)
- if len(login)<2 or not dev:return jsonify(ok=False),400
- with PPT_LOCK:
-  room=_ppt_room(login); room["devices"].setdefault(dev,{})["seen"]=_time.time(); seq=room["seq"]; cmd=room["command"] if seq>last else ""
- return jsonify(ok=True,seq=seq,command=cmd)
-
-@app.post("/api/ppt/command")
-def ppt_command():
- x=request.json or {}; login=_ppt_login(x.get("login")); cmd=str(x.get("command",""))
+@app.post("/api/presentation/command")
+def presentation_command():
+ x=request.json or {}; login=_clean_remote_login(x.get("login")); cmd=str(x.get("command",""))
  if len(login)<2 or cmd not in ("next","prev"):return jsonify(ok=False),400
- with PPT_LOCK:
-  room=_ppt_room(login); room["seq"]+=1; room["command"]=cmd; seq=room["seq"]
- return jsonify(ok=True,seq=seq)
+ try:return jsonify(_remote_json("/api/command","POST",{"login":login,"command":cmd}))
+ except Exception as e:return jsonify(ok=False,error="Presentation Remote unavailable"),502
 
-@app.get("/api/ppt/status")
-def ppt_status():
- login=_ppt_login(request.args.get("login"))
+@app.get("/api/presentation/status")
+def presentation_status():
+ login=_clean_remote_login(request.args.get("login"))
  if len(login)<2:return jsonify(ok=True,online=0)
- now=_time.time()
- with PPT_LOCK:
-  online=sum(1 for d in _ppt_room(login)["devices"].values() if now-float(d.get("seen",0))<=PPT_ONLINE_SECONDS)
- return jsonify(ok=True,online=online)
+ try:return jsonify(_remote_json("/api/status?login="+urllib.parse.quote(login)))
+ except Exception:return jsonify(ok=False,online=0),502
+
+@app.post("/api/presentation/remote-heartbeat")
+def presentation_remote_heartbeat():
+ x=request.json or {}; login=_clean_remote_login(x.get("login")); rid=str(x.get("remote_id",""))[:100]
+ if len(login)<2 or not rid:return jsonify(ok=False),400
+ try:return jsonify(_remote_json("/api/remote-heartbeat","POST",{"login":login,"remote_id":rid}))
+ except Exception:return jsonify(ok=False),502
 
 if __name__=="__main__":app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))

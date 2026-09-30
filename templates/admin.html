@@ -43,12 +43,42 @@ function toggleQR(){
 
 <script>
 const pptLogin=document.getElementById("pptLogin");
+const pptStatus=document.getElementById("pptStatus");
 pptLogin.value=localStorage.getItem("pptLogin")||"";
+let activePptLogin=cleanLogin(pptLogin.value);
+let pptRemoteId=localStorage.getItem("pptAdminRemoteId")||"";
+if(!pptRemoteId){pptRemoteId="admin-"+(crypto.randomUUID?crypto.randomUUID():Date.now()+"-"+Math.random());localStorage.setItem("pptAdminRemoteId",pptRemoteId)}
 function cleanLogin(v){return (v||"").trim().toLowerCase().replace(/[^a-zа-яё0-9_-]/gi,"").slice(0,40)}
-function savePptLogin(){pptLogin.value=cleanLogin(pptLogin.value);if(pptLogin.value)localStorage.setItem("pptLogin",pptLogin.value);pptStatusUpdate()}
-function resetPptLogin(){localStorage.removeItem("pptLogin");pptLogin.value="";pptStatusUpdate()}
-async function ppt(command){const login=cleanLogin(pptLogin.value);if(!login){alert("Введите логин пульта");return}await fetch("/api/ppt/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({login,command})})}
-async function pptStatusUpdate(){const login=cleanLogin(pptLogin.value),el=document.getElementById("pptStatus");if(!login){el.textContent="ПУЛЬТЫ: логин не задан";return}try{const d=await(await fetch("/api/ppt/status?login="+encodeURIComponent(login),{cache:"no-store"})).json();el.textContent="ПУЛЬТЫ: ● "+d.online+" ПОДКЛЮЧЕНО · "+login.toUpperCase()}catch(e){el.textContent="ПУЛЬТЫ: связь с сервером…"}}
-setInterval(pptStatusUpdate,1500);pptStatusUpdate();
+function savePptLogin(){
+ const login=cleanLogin(pptLogin.value);pptLogin.value=login;
+ if(!login)return;
+ activePptLogin=login;localStorage.setItem("pptLogin",login);
+ pptHeartbeat();pptStatusUpdate();
+}
+function resetPptLogin(){
+ activePptLogin="";localStorage.removeItem("pptLogin");pptLogin.value="";
+ pptStatus.textContent="ПУЛЬТЫ: логин не задан";
+}
+async function ppt(command){
+ const login=activePptLogin;
+ if(!login){alert("Введите логин пульта и нажмите ПОДКЛЮЧИТЬ");return}
+ try{await fetch("/api/presentation/command",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({login,command})})}catch(e){}
+}
+async function pptHeartbeat(){
+ const login=activePptLogin;if(!login)return;
+ try{await fetch("/api/presentation/remote-heartbeat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({login,remote_id:pptRemoteId})})}catch(e){}
+}
+async function pptStatusUpdate(){
+ const login=activePptLogin;
+ if(!login){pptStatus.textContent="ПУЛЬТЫ: логин не задан";return}
+ try{
+  const r=await fetch("/api/presentation/status?login="+encodeURIComponent(login),{cache:"no-store"});
+  const d=await r.json();
+  if(!r.ok)throw new Error();
+  pptStatus.textContent=d.online>0?"● ПУЛЬТ ПОДКЛЮЧЕН · "+login.toUpperCase():"○ ПУЛЬТ НЕ ПОДКЛЮЧЕН · "+login.toUpperCase();
+  pptStatus.style.color=d.online>0?"#52d273":"#aaa";
+ }catch(e){pptStatus.textContent="ПУЛЬТЫ: связь с сервером…";pptStatus.style.color="#aaa"}
+}
+setInterval(pptHeartbeat,3000);setInterval(pptStatusUpdate,1500);pptHeartbeat();pptStatusUpdate();
 </script>
 </body></html>
