@@ -10,7 +10,7 @@ Q=[
 ("ЧТО СЛУЧИТСЯ С ГИМНАСТОМ?",["Станет добычей крокодила","Выполнит акробатический трюк","Сломает ветку","Зацепится футболкой за ветку"],0),
 ("КТО ЖЕ ПОЁТ ЗА ШИРМОЙ?",["Ургант","Басков","Билан","Сын Градского"],2),
 ("КАКАЯ КРЫШКА ЗАЙМЁТ 1-Е МЕСТО?",["Синяя","Белая","Голубая","Золотая"],3)]
-S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{}}
+S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{},"preload_done":0,"preload_total":0}
 @app.get("/")
 def home(): return render_template("index.html")
 @app.get("/admin")
@@ -70,6 +70,19 @@ def screen():
 @app.get('/api/presentation')
 def presentation_state():
  return jsonify(slide=S.get('slide',1), total=40)
+
+
+@app.route('/api/presentation/preload',methods=['GET','POST'])
+def presentation_preload():
+ if request.method=='POST':
+  x=request.json or {}
+  with lock:
+   S['preload_done']=max(0,int(x.get('done',0)))
+   S['preload_total']=max(0,int(x.get('total',0)))
+  return jsonify(ok=True)
+ total=int(S.get('preload_total',0)); done=int(S.get('preload_done',0))
+ pct=round(done*100/total) if total else 0
+ return jsonify(done=done,total=total,percent=pct,ready=bool(total and done>=total))
 
 @app.post('/api/presentation/action')
 def presentation_action():
