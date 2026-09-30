@@ -1,106 +1,166 @@
-from flask import Flask,request,jsonify,render_template
+from flask import Flask, request, jsonify, render_template
+from flask_socketio import SocketIO, join_room
 from threading import Lock
-import os,uuid,json,urllib.request,urllib.parse
-app=Flask(__name__); lock=Lock()
-Q=[
-("ЧТО СДЕЛАЕТ БЫК?",["Развернётся и спокойно уйдёт","Пробежит мимо контейнера","Запрыгнет внутрь к мужчине","Начнёт бодать контейнер"],2),
-("С КАКОЙ ПОПЫТКИ МУЖЧИНА ПОПАДЁТ ПО ГУБКЕ?",["Со второго раза","С третьего","С четвёртого","Вообще не попадёт"],2),
-("ЧТО ОН ПЕЧАТАЛ?",["Культуру","Деньги","Кроссворды","Газету «Коммерсант»"],0),
-("ЧТО СДЕЛАЕТ ДАЛЬШЕ ИНДИЙСКИЙ СУПЕРГЕРОЙ?",["Спасёт пассажиров от террористов","Заберётся на крыло и починит лопасть","Сцепит всех пассажиров и вытащит","Опустит колесо, чтобы самолёт сел"],3),
-("ЧТО СЛУЧИТСЯ С ГИМНАСТОМ?",["Станет добычей крокодила","Выполнит акробатический трюк","Сломает ветку","Зацепится футболкой за ветку"],0),
-("КТО ЖЕ ПОЁТ ЗА ШИРМОЙ?",["Ургант","Басков","Билан","Сын Градского"],2),
-("КАКАЯ КРЫШКА ЗАЙМЁТ 1-Е МЕСТО?",["Синяя","Белая","Голубая","Золотая"],3)]
-S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{}}
+import os, time
+
+app=Flask(__name__)
+socketio=SocketIO(app, cors_allowed_origins="*", async_mode="threading",
+                  ping_interval=10, ping_timeout=20)
+LOCK=Lock()
+ROOMS={}
+ONLINE_SECONDS=20
+
+@app.after_request
+def add_cors_headers(response):
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+    response.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
+    return response
+
+def clean_login(v):
+    return "".join(ch for ch in str(v or "").strip().lower()
+                   if ch.isalnum() or ch in "_-")[:40]
+
+def room(login):
+    return ROOMS.setdefault(login,{"next_id":0,"devices":{},"remotes":{}})
+
+def online_devices(r):
+    now=time.time()
+    return {k:v for k,v in r["devices"].items()
+            if now-float(v.get("seen",0))<=ONLINE_SECONDS}
+
 @app.get("/")
-def home(): return render_template("index.html")
-@app.get("/admin")
-def admin(): return render_template("admin.html")
+def remote():
+    return render_template("remote.html")
 
+@app.get("/health")
+def health():
+    return jsonify(ok=True)
 
-@app.get("/remote")
-def remote_page(): return render_template("remote.html")
+def touch(login,dev,sid=None):
+    r=room(login)
+    d=r["devices"].setdefault(dev,{"seen":0,"queue":[],"sid":None})
+    d["seen"]=time.time()
+    if sid is not None:d["sid"]=sid
+    return d
 
-@app.get("/results")
-def results(): return render_template("results.html")
+@app.post("/api/register")
+def register():
+    x=request.json or {}; login=clean_login(x.get("login")); dev=str(x.get("device_id",""))[:100]
+    if len(login)<2 or not dev:return jsonify(ok=False),400
+    with LOCK:touch(login,dev)
+    return jsonify(ok=True)
 
-@app.get("/qr")
-def qr_page(): return render_template("qr.html")
-@app.get("/api/state")
-def state():
- d=request.args.get("device",""); r=S["r"]; key=f'{S["session"]}:{r}:{d}'
- return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"],session=S["session"],registered=d in S["players"])
-@app.post("/api/join")
-def join():
- x=request.json or {}; d=str(x.get("device",""))[:100]; n=str(x.get("name","")).strip()[:40]
- if not d or not n:return jsonify(ok=False),400
- with lock:S["players"][d]=n
- return jsonify(ok=True,session=S["session"])
-@app.post("/api/vote")
-def vote():
- x=request.json or {}; d=str(x.get("device","")); c=int(x.get("choice",-1))
- with lock:
-  if not S["open"]:return jsonify(ok=False,error="Голосование закрыто"),409
-  if d not in S["players"]:return jsonify(ok=False,error="Введите имя"),403
-  r=S["r"]; k=f'{S["session"]}:{r}:{d}'
-  if k in S["votes"]:return jsonify(ok=False,error="Вы уже проголосовали"),409
-  if c not in range(4):return jsonify(ok=False),400
-  S["votes"][k]=c
- return jsonify(ok=True)
-@app.get("/api/admin")
-def ast():
- r=S["r"]; counts=[0]*4; scores={d:0 for d in S["players"]}
- for k,c in S["votes"].items():
-  p=k.split(":"); rr=int(p[1]); dev=":".join(p[2:])
-  if p[0]!=S["session"]:continue
-  if rr==r:counts[c]+=1
-  if dev in scores and c==Q[rr][2]:scores[dev]+=1
- leaders=sorted([{"name":S["players"][d],"score":v} for d,v in scores.items()],key=lambda x:(-x["score"],x["name"]))
- return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],counts=counts,players=len(S["players"]),voted=sum(counts),leaders=leaders)
-@app.post("/api/admin/action")
-def action():
- x=request.json or {}; a=x.get("action")
- with lock:
-  if a=="toggle":S["open"]=not S["open"]
-  elif a=="round":S["r"]=max(0,min(6,int(x["round"])-1));S["open"]=False
-  elif a=="reset":S.update(r=0,open=False,session=str(uuid.uuid4()),players={},votes={})
-  else:return jsonify(ok=False),400
- return jsonify(ok=True)
+@app.post("/api/heartbeat")
+def heartbeat():
+    x=request.json or {}; login=clean_login(x.get("login")); dev=str(x.get("device_id",""))[:100]
+    if len(login)<2 or not dev:return jsonify(ok=False),400
+    with LOCK:touch(login,dev)
+    return jsonify(ok=True)
 
-# Presentation Remote proxy: the contest stays independent, while commands go
-# to the standalone realtime Presentation Remote service.
-PRESENTATION_REMOTE_URL=os.environ.get("PRESENTATION_REMOTE_URL","https://presentation-remote-yy6x.onrender.com").rstrip("/")
+@app.get("/api/poll")
+def poll():
+    login=clean_login(request.args.get("login")); dev=str(request.args.get("device_id",""))[:100]
+    if len(login)<2 or not dev:return jsonify(ok=False),400
+    with LOCK:
+        d=touch(login,dev)
+        if d["queue"]:
+            c=d["queue"][0]
+            return jsonify(ok=True,id=c["id"],command=c["command"])
+    return jsonify(ok=True,id=0,command="")
 
-def _remote_json(path, method="GET", payload=None):
- data=None
- headers={}
- if payload is not None:
-  data=json.dumps(payload).encode("utf-8"); headers["Content-Type"]="application/json"
- req=urllib.request.Request(PRESENTATION_REMOTE_URL+path,data=data,headers=headers,method=method)
- with urllib.request.urlopen(req,timeout=8) as r:
-  return json.loads(r.read().decode("utf-8"))
+@app.post("/api/ack")
+def ack():
+    x=request.json or {}; login=clean_login(x.get("login")); dev=str(x.get("device_id",""))[:100]; cid=int(x.get("id",0) or 0)
+    if len(login)<2 or not dev or cid<=0:return jsonify(ok=False),400
+    with LOCK:
+        d=touch(login,dev)
+        d["queue"]=[c for c in d["queue"] if int(c["id"])!=cid]
+    return jsonify(ok=True)
 
-def _clean_remote_login(v):
- return "".join(ch for ch in str(v or "").strip().lower() if ch.isalnum() or ch in "_-")[:40]
+def issue_command(login,cmd):
+    with LOCK:
+        r=room(login); targets=online_devices(r)
+        r["next_id"]+=1; cid=r["next_id"]
+        deliveries=[]
+        for dev,d in targets.items():
+            c={"id":cid,"command":cmd}
+            d["queue"].append(c)
+            if d.get("sid"):deliveries.append((d["sid"],c))
+    for sid,c in deliveries:
+        socketio.emit("command",c,to=sid)
+    return cid
 
-@app.post("/api/presentation/command")
-def presentation_command():
- x=request.json or {}; login=_clean_remote_login(x.get("login")); cmd=str(x.get("command",""))
- if len(login)<2 or cmd not in ("next","prev"):return jsonify(ok=False),400
- try:return jsonify(_remote_json("/api/command","POST",{"login":login,"command":cmd}))
- except Exception as e:return jsonify(ok=False,error="Presentation Remote unavailable"),502
+@app.post("/api/command")
+def command():
+    x=request.json or {}; login=clean_login(x.get("login")); cmd=str(x.get("command",""))
+    if len(login)<2 or cmd not in ("next","prev"):return jsonify(ok=False),400
+    return jsonify(ok=True,id=issue_command(login,cmd))
 
-@app.get("/api/presentation/status")
-def presentation_status():
- login=_clean_remote_login(request.args.get("login"))
- if len(login)<2:return jsonify(ok=True,online=0)
- try:return jsonify(_remote_json("/api/status?login="+urllib.parse.quote(login)))
- except Exception:return jsonify(ok=False,online=0),502
+@app.post("/api/remote-heartbeat")
+def remote_heartbeat():
+    x=request.json or {}
+    login=clean_login(x.get("login"))
+    rid=str(x.get("remote_id",""))[:100]
+    if len(login)<2 or not rid:return jsonify(ok=False),400
+    with LOCK:
+        room(login)["remotes"][rid]=time.time()
+    return jsonify(ok=True)
 
-@app.post("/api/presentation/remote-heartbeat")
-def presentation_remote_heartbeat():
- x=request.json or {}; login=_clean_remote_login(x.get("login")); rid=str(x.get("remote_id",""))[:100]
- if len(login)<2 or not rid:return jsonify(ok=False),400
- try:return jsonify(_remote_json("/api/remote-heartbeat","POST",{"login":login,"remote_id":rid}))
- except Exception:return jsonify(ok=False),502
+@app.get("/api/remote-status")
+def remote_status():
+    login=clean_login(request.args.get("login"))
+    if len(login)<2:return jsonify(ok=True,online=0)
+    now=time.time()
+    with LOCK:
+        r=room(login)
+        r["remotes"]={k:v for k,v in r.get("remotes",{}).items() if now-float(v)<=60}
+        n=sum(1 for v in r["remotes"].values() if now-float(v)<=12)
+    return jsonify(ok=True,online=n)
 
-if __name__=="__main__":app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
+@app.get("/api/status")
+def status():
+    login=clean_login(request.args.get("login"))
+    if len(login)<2:return jsonify(ok=True,online=0)
+    with LOCK:n=len(online_devices(room(login)))
+    return jsonify(ok=True,online=n)
+
+@app.get("/api/devices")
+def devices():
+    login=clean_login(request.args.get("login"))
+    if len(login)<2:return jsonify(ok=True,devices=[])
+    now=time.time()
+    with LOCK:
+        items=[{"id":dev[-6:].upper(),"online":now-float(d.get("seen",0))<=ONLINE_SECONDS,
+                "realtime":bool(d.get("sid"))}
+               for dev,d in room(login)["devices"].items()
+               if now-float(d.get("seen",0))<=60]
+    return jsonify(ok=True,devices=items)
+
+@socketio.on("register")
+def ws_register(data):
+    login=clean_login((data or {}).get("login")); dev=str((data or {}).get("device_id",""))[:100]
+    if len(login)<2 or not dev:return {"ok":False}
+    join_room("login:"+login)
+    with LOCK:
+        d=touch(login,dev,request.sid)
+        queued=list(d["queue"])
+    for c in queued:socketio.emit("command",c,to=request.sid)
+    return {"ok":True}
+
+@socketio.on("heartbeat")
+def ws_heartbeat(data):
+    login=clean_login((data or {}).get("login")); dev=str((data or {}).get("device_id",""))[:100]
+    if len(login)>=2 and dev:
+        with LOCK:touch(login,dev,request.sid)
+
+@socketio.on("ack")
+def ws_ack(data):
+    login=clean_login((data or {}).get("login")); dev=str((data or {}).get("device_id",""))[:100]; cid=int((data or {}).get("id",0) or 0)
+    if len(login)>=2 and dev and cid:
+        with LOCK:
+            d=touch(login,dev,request.sid)
+            d["queue"]=[c for c in d["queue"] if int(c["id"])!=cid]
+
+if __name__=="__main__":
+    socketio.run(app,host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
