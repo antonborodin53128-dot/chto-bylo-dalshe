@@ -11,6 +11,7 @@ Q=[
 ("КТО ЖЕ ПОЁТ ЗА ШИРМОЙ?",["Ургант","Басков","Билан","Сын Градского"],2),
 ("КАКАЯ КРЫШКА ЗАЙМЁТ 1-Е МЕСТО?",["Синяя","Белая","Голубая","Золотая"],3)]
 S={"r":0,"open":False,"session":str(uuid.uuid4()),"players":{},"votes":{}}
+PPT={"clients":{}}
 @app.get("/")
 def home(): return render_template("index.html")
 @app.get("/admin")
@@ -24,13 +25,13 @@ def qr_page(): return render_template("qr.html")
 @app.get("/api/state")
 def state():
  d=request.args.get("device",""); r=S["r"]; key=f'{S["session"]}:{r}:{d}'
- return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"])
+ return jsonify(round=r+1,open=S["open"],question=Q[r][0],answers=Q[r][1],voted=key in S["votes"],session=S["session"],registered=d in S["players"])
 @app.post("/api/join")
 def join():
  x=request.json or {}; d=str(x.get("device",""))[:100]; n=str(x.get("name","")).strip()[:40]
  if not d or not n:return jsonify(ok=False),400
  with lock:S["players"][d]=n
- return jsonify(ok=True)
+ return jsonify(ok=True,session=S["session"])
 @app.post("/api/vote")
 def vote():
  x=request.json or {}; d=str(x.get("device","")); c=int(x.get("choice",-1))
@@ -61,4 +62,59 @@ def action():
   elif a=="reset":S.update(r=0,open=False,session=str(uuid.uuid4()),players={},votes={})
   else:return jsonify(ok=False),400
  return jsonify(ok=True)
+
+# --- PowerPoint Remote ---
+import time
+
+@app.post("/api/ppt/register")
+def ppt_register():
+ x=request.json or {}; code=str(x.get("code","")).strip()
+ if not (len(code)==6 and code.isdigit()): return jsonify(ok=False),400
+ with lock:
+  c=PPT["clients"].setdefault(code,{"seq":0,"command":None,"seen":0,"name":"","slide":0,"total":0})
+  c["seen"]=time.time()
+ return jsonify(ok=True)
+
+@app.post("/api/ppt/heartbeat")
+def ppt_heartbeat():
+ x=request.json or {}; code=str(x.get("code","")).strip()
+ with lock:
+  c=PPT["clients"].get(code)
+  if not c:return jsonify(ok=False,error="not_registered"),404
+  c["seen"]=time.time()
+  c["name"]=str(x.get("name",""))[:120]
+  c["slide"]=int(x.get("slide",0) or 0)
+  c["total"]=int(x.get("total",0) or 0)
+ return jsonify(ok=True)
+
+@app.get("/api/ppt/poll")
+def ppt_poll():
+ code=str(request.args.get("code","")).strip()
+ last=int(request.args.get("last",0) or 0)
+ with lock:
+  c=PPT["clients"].get(code)
+  if not c:return jsonify(ok=False,error="not_registered"),404
+  c["seen"]=time.time()
+  if c["seq"]>last:return jsonify(ok=True,seq=c["seq"],command=c["command"])
+  return jsonify(ok=True,seq=c["seq"],command=None)
+
+@app.post("/api/ppt/action")
+def ppt_action():
+ x=request.json or {}; code=str(x.get("code","")).strip(); cmd=str(x.get("command",""))
+ if cmd not in ("next","prev","start","end","black"):return jsonify(ok=False),400
+ with lock:
+  c=PPT["clients"].get(code)
+  if not c:return jsonify(ok=False,error="Пульт не подключён"),404
+  c["seq"]+=1;c["command"]=cmd
+ return jsonify(ok=True,seq=c["seq"])
+
+@app.get("/api/ppt/status")
+def ppt_status():
+ code=str(request.args.get("code","")).strip()
+ with lock:
+  c=PPT["clients"].get(code)
+  if not c:return jsonify(connected=False)
+  online=(time.time()-c["seen"])<5
+  return jsonify(connected=online,name=c["name"],slide=c["slide"],total=c["total"])
+
 if __name__=="__main__":app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
