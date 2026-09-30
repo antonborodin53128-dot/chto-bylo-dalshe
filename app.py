@@ -61,4 +61,27 @@ def action():
   elif a=="reset":S.update(r=0,open=False,session=str(uuid.uuid4()),players={},votes={})
   else:return jsonify(ok=False),400
  return jsonify(ok=True)
+
+# --- Guest presentation screen ---
+@app.get('/screen')
+def screen():
+ return render_template('screen.html')
+
+@app.get('/api/presentation')
+def presentation_state():
+ return jsonify(slide=S.get('slide',1), total=40)
+
+@app.post('/api/presentation/action')
+def presentation_action():
+ x=request.json or {}; a=x.get('action')
+ with lock:
+  cur=int(S.get('slide',1))
+  if a=='next': cur=min(40,cur+1)
+  elif a=='prev': cur=max(1,cur-1)
+  elif a=='goto': cur=max(1,min(40,int(x.get('slide',cur))))
+  elif a=='first': cur=1
+  else: return jsonify(ok=False),400
+  S['slide']=cur
+ return jsonify(ok=True,slide=cur)
+
 if __name__=="__main__":app.run(host="0.0.0.0",port=int(os.environ.get("PORT",10000)))
