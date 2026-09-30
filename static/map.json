@@ -1,0 +1,281 @@
+{
+  "1": [
+    {
+      "src": "/static/presentation/media/media1.mp4",
+      "left": 50.625,
+      "top": 6.0,
+      "width": 45.375,
+      "height": 90.13333333333333
+    }
+  ],
+  "4": [
+    {
+      "src": "/static/presentation/media/media2.mp4",
+      "left": 0.0,
+      "top": 0.0,
+      "width": 99.99974573490815,
+      "height": 100.0
+    }
+  ],
+  "6": [
+    {
+      "src": "/static/presentation/media/media3.mp4",
+      "left": 30.078125,
+      "top": 0.0,
+      "width": 39.84375,
+      "height": 100.0
+    }
+  ],
+  "7": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "8": [
+    {
+      "src": "/static/presentation/media/media5.mp4",
+      "left": 30.0123687664042,
+      "top": 0.0,
+      "width": 39.975262467191605,
+      "height": 100.0
+    }
+  ],
+  "9": [
+    {
+      "src": "/static/presentation/media/media5.mp4",
+      "left": 30.0123687664042,
+      "top": 0.0,
+      "width": 39.975262467191605,
+      "height": 100.0
+    }
+  ],
+  "11": [
+    {
+      "src": "/static/presentation/media/media6.mp4",
+      "left": 30.441683070866144,
+      "top": 0.0,
+      "width": 39.11662565616798,
+      "height": 100.0
+    }
+  ],
+  "12": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "13": [
+    {
+      "src": "/static/presentation/media/media7.mp4",
+      "left": 30.530446194225725,
+      "top": 0.0,
+      "width": 38.93910761154856,
+      "height": 100.0
+    }
+  ],
+  "14": [
+    {
+      "src": "/static/presentation/media/media7.mp4",
+      "left": 30.530446194225725,
+      "top": 0.0,
+      "width": 38.93910761154856,
+      "height": 100.0
+    }
+  ],
+  "16": [
+    {
+      "src": "/static/presentation/media/media8.mp4",
+      "left": 22.34201935695538,
+      "top": 14.166666666666666,
+      "width": 55.31596128608924,
+      "height": 73.75459317585302
+    }
+  ],
+  "17": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "18": [
+    {
+      "src": "/static/presentation/media/media9.mp4",
+      "left": 23.112582020997372,
+      "top": 14.150116652085156,
+      "width": 53.774835958005255,
+      "height": 71.6997666958297
+    }
+  ],
+  "19": [
+    {
+      "src": "/static/presentation/media/media9.mp4",
+      "left": 29.623868110236216,
+      "top": 17.297652376786235,
+      "width": 48.5933562992126,
+      "height": 64.79113444152814
+    }
+  ],
+  "21": [
+    {
+      "src": "/static/presentation/media/media10.mp4",
+      "left": 14.633366141732285,
+      "top": 15.982341790609508,
+      "width": 70.73326771653544,
+      "height": 68.035316418781
+    }
+  ],
+  "22": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "23": [
+    {
+      "src": "/static/presentation/media/media11.mp4",
+      "left": 15.000574146981627,
+      "top": 16.33553514144065,
+      "width": 69.99885170603675,
+      "height": 67.3289297171187
+    }
+  ],
+  "24": [
+    {
+      "src": "/static/presentation/media/media11.mp4",
+      "left": 29.545743110236224,
+      "top": 18.452989209682123,
+      "width": 65.59601377952757,
+      "height": 63.094021580635754
+    }
+  ],
+  "26": [
+    {
+      "src": "/static/presentation/media/media12.mp4",
+      "left": 30.441683070866144,
+      "top": 0.0,
+      "width": 39.11662565616798,
+      "height": 100.0
+    }
+  ],
+  "27": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "28": [
+    {
+      "src": "/static/presentation/media/media13.mp4",
+      "left": 30.530446194225725,
+      "top": 0.0,
+      "width": 38.93910761154856,
+      "height": 100.0
+    }
+  ],
+  "29": [
+    {
+      "src": "/static/presentation/media/media13.mp4",
+      "left": 30.530446194225725,
+      "top": 0.0,
+      "width": 38.93910761154856,
+      "height": 100.0
+    }
+  ],
+  "31": [
+    {
+      "src": "/static/presentation/media/media14.mp4",
+      "left": 14.166674868766405,
+      "top": 14.166681248177312,
+      "width": 71.66665026246719,
+      "height": 71.66663750364538
+    }
+  ],
+  "32": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "33": [
+    {
+      "src": "/static/presentation/media/media15.mp4",
+      "left": 14.740977690288714,
+      "top": 15.828667249927092,
+      "width": 70.51804461942257,
+      "height": 70.51805191017789
+    }
+  ],
+  "34": [
+    {
+      "src": "/static/presentation/media/media15.mp4",
+      "left": 29.623868110236216,
+      "top": 17.297652376786235,
+      "width": 66.16727362204725,
+      "height": 66.16727909011374
+    }
+  ],
+  "36": [
+    {
+      "src": "/static/presentation/media/media16.mp4",
+      "left": 34.17968339895013,
+      "top": 0.0,
+      "width": 31.640625,
+      "height": 100.0
+    }
+  ],
+  "37": [
+    {
+      "src": "/static/presentation/media/media4.mp4",
+      "left": 82.65625,
+      "top": 5.555555555555555,
+      "width": 10.78125,
+      "height": 19.166666666666668
+    }
+  ],
+  "38": [
+    {
+      "src": "/static/presentation/media/media17.mp4",
+      "left": 34.17968339895013,
+      "top": 0.0,
+      "width": 31.640625,
+      "height": 100.0
+    }
+  ],
+  "39": [
+    {
+      "src": "/static/presentation/media/media17.mp4",
+      "left": 34.17968339895013,
+      "top": 0.0,
+      "width": 31.64063320209974,
+      "height": 100.0
+    }
+  ],
+  "40": [
+    {
+      "src": "/static/presentation/media/media1.mp4",
+      "left": 50.625,
+      "top": 6.0,
+      "width": 45.375,
+      "height": 90.13333333333333
+    }
+  ]
+}
